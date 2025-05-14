@@ -1,0 +1,14 @@
+/* ────────
+   エディタ（ライブプレビュー含む）の行間
+──────────────────────── */
+.cm-editor .cm-content {
+  line-height: 1.6 !important;
+}
+
+/* ────────
+   プレビュー（表示モード）の行間
+──────────────────────── */
+.markdown-preview-view {
+  line-height: 1.6 !important;
+}
+
