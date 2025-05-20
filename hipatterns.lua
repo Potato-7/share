@@ -1,3 +1,4 @@
+
 -- ~/.config/nvim/lua/plugins/mini-hipatterns.lua
 return {
   {
