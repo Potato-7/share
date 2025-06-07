@@ -1,0 +1,12 @@
+{
+  "type": "exec",
+  "style": "powerline",
+  "foreground": "#ffffff",
+  "background": "#0db7ed",
+  "properties": {
+    "command": "docker info --format \"{{.Username}}\" 2>$null",
+    "prefix": "🐳 ",
+    "error": "",
+    "trim_output": true
+  }
+},
