@@ -1,3 +1,6 @@
 {
-  "cssTheme": "Obsidianite"
+  "cssTheme": "Obsidianite",
+  "enabledCssSnippets": [
+    "custom"
+  ]
 }
