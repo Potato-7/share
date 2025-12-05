@@ -1,10 +1,13 @@
-import { prisma } from "@myproj/prisma-client";
+import { PrismaClient } from "@myproj/prisma-client";
 import type { TestRepository } from "@myproj/domain/test/test.repository";
 import type { Enrollment } from "@myproj/domain/enrollment/enrollment.entity";
 import { TestInfo } from "@myproj/domain/test/test.entity";
 import { DbError } from "../errors/infra-error";
 
 export class PrismaTestRepository implements TestRepository {
+  // ✅ StaffRepository と同じ：PrismaClient をコンストラクタインジェクション
+  constructor(private readonly prisma: PrismaClient | any) {}
+
   async findTestInfoForStudent(params: {
     testId: number;
     enrollment: Enrollment;
@@ -12,7 +15,7 @@ export class PrismaTestRepository implements TestRepository {
     const { testId, enrollment } = params;
 
     try {
-      const row = await prisma.testMaster.findFirst({
+      const row = await this.prisma.testMaster.findFirst({
         where: {
           testId,
           isDeleted: false,
