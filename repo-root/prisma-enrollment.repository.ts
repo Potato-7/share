@@ -1,15 +1,17 @@
-import { prisma } from "@myproj/prisma-client";
-import { Enrollment } from "@myproj/domain/enrollment/enrollment.entity";
+import { PrismaClient } from '@myproj/prisma-client';
+import { Enrollment } from '@myproj/domain/enrollment/enrollment.entity';
 import type {
   EnrollmentRepository,
   FindEnrollmentKey,
-} from "@myproj/domain/enrollment/enrollment.repository";
-import { DbError } from "../errors/infra-error";
+} from '@myproj/domain/enrollment/enrollment.repository';
+import { DbError } from '../errors/infra-error';
 
 export class PrismaEnrollmentRepository implements EnrollmentRepository {
+  constructor(private readonly prisma: PrismaClient | any) {}
+
   async findByKey(key: FindEnrollmentKey): Promise<Enrollment | null> {
     try {
-      const row = await prisma.apply.findFirst({
+      const row = await this.prisma.apply.findFirst({
         where: {
           jukoId: key.jukoId,
           fiscalYear: key.fiscalYear,
@@ -19,9 +21,10 @@ export class PrismaEnrollmentRepository implements EnrollmentRepository {
       });
 
       if (!row) return null;
+
       return new Enrollment(row.jukoId, row.fiscalYear, row.courseCode);
     } catch (e) {
-      throw new DbError("申込情報取得中にDBエラーが発生しました。", e);
+      throw new DbError('申込情報取得中にDBエラーが発生しました。', e);
     }
   }
 }
