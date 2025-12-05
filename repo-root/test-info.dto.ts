@@ -1,4 +1,6 @@
-// APIレスポンスの result 部分そのまま
+import type { TestInfo } from "@myproj/domain/test/test.entity";
+
+// APIレスポンス result の型
 export type TestInfoDto = {
   testName: string;
   targetAnswerTime: string | null;
@@ -10,9 +12,17 @@ export type TestInfoDto = {
   answerTime: string | null;
 };
 
-// 画面用の ViewModel（必要なら）
-export type TestInfoViewModel = TestInfoDto & {
-  // 例えば「提出済みかどうか」を文言にしたものなど
-  submittedLabel: string;
-};
+// ドメイン → DTO 変換関数
+export function toTestInfoDto(entity: TestInfo): TestInfoDto {
+  return {
+    testName: entity.testName,
+    targetAnswerTime: entity.targetAnswerTime,
+    isScoreHidden: entity.isScoreHidden,
+    baseScore: entity.baseScore,
+    coverNotice: entity.coverNotice,
+    isSubmitted: entity.isSubmitted,
+    correctAnswerRate: entity.correctAnswerRate,
+    answerTime: entity.answerTime,
+  };
+}
 
