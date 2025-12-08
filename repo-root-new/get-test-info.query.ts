@@ -1,17 +1,23 @@
 // apps/shikakuruapi/src/features/test/application/query/get-test-info.query.ts
-import { prisma } from "@myproj/prisma-client";
-import { toTestInfoDto } from "./test-info.dto";
 
-// 返却用の型は適当に
-export type TestInfoRow = ReturnType<typeof toTestInfoDto>;
+import { PrismaClient } from "@myproj/prisma-client";
+import {
+  toTestInfoDto,
+  type TestInfoDto,
+  type TestInfoSource,
+} from "./test-info.dto";
+
+export type TestInfoRow = TestInfoDto;
+
+const prisma = new PrismaClient();
 
 export async function getTestInfoQuery(params: {
-  testMasterTempId: number;
+  testMasterTempId: number; // URL の testId を変換したもの
   jukoId: string;
 }): Promise<TestInfoRow | null> {
   const { testMasterTempId, jukoId } = params;
 
-  // ① テストマスタ（Wテストマスタ）を1件取得
+  // ① Wテストマスタを取得
   const testMaster = await prisma.wTestMaster.findFirst({
     where: {
       testMasterTempId,
@@ -21,29 +27,41 @@ export async function getTestInfoQuery(params: {
 
   if (!testMaster) return null;
 
-  // ② 設問詳細を別クエリで取得
-  const details = await prisma.testDetail.findMany({
-    where: {
-      testId: testMaster.testId,
-      isDeleted: false,
-      // isPublished: true, など必要な条件
-    },
-    orderBy: { testDetailId: "asc" },
-  });
+  // ② （必要なら）設問詳細は別クエリ
+  //    今回の DTO では使っていないので、ここでは取得だけ or 削っても OK
+  // const details = await prisma.testDetail.findMany({
+  //   where: {
+  //     testId: testMaster.testMasterTempId,
+  //     isDeleted: false,
+  //     isPublished: true,
+  //   },
+  //   orderBy: { testDetailId: "asc" },
+  // });
 
-  // ③ 提出情報を別クエリで取得（必要なら）
-  const submit = await prisma.tTestSubmit.findFirst({
+  // ③ 提出情報を取得
+  const submit = await prisma.testResult.findFirst({
     where: {
-      testId: testMaster.testId,
+      testId: testMaster.testMasterTempId,
       jukoId,
     },
   });
 
-  // ④ DTO にまとめて返す
-  return toTestInfoDto({
-    testMaster,
-    details,
-    submit,
-  });
+  const source: TestInfoSource = {
+    testMaster: {
+      testName: testMaster.testName,
+      targetAnswerTime: testMaster.targetAnswerTime,
+      isScoreHidden: testMaster.isScoreHidden,
+      baseScore: testMaster.baseScore,
+      coverNotice: testMaster.coverNotice,
+    },
+    submit: submit
+      ? {
+          correctAnswerRate: submit.correctAnswerRate,
+          answerTime: submit.answerTime,
+        }
+      : null,
+  };
+
+  return toTestInfoDto(source);
 }
 

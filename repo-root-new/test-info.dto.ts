@@ -1,40 +1,54 @@
-// apps/api/features/test/get-test-info/test-info.dto.ts
+// apps/shikakuruapi/src/features/test/application/query/test-info.dto.ts
 
-import type { TestInfoRow } from "./get-test-info.query";
-
+// ★ API で返す最終形
 export type TestInfoDto = {
   testName: string;
-  targetAnswerTime: string | null;   // "30分"
+  targetAnswerTime: string | null;
   isScoreHidden: boolean;
-  baseScore: string | null;          // "20点"
+  baseScore: string | null;
   coverNotice: string | null;
   isSubmitted: boolean;
-  correctAnswerRate: string | null;  // "87%"
-  answerTime: string | null;         // "34分"
+  correctAnswerRate: string | null;
+  answerTime: string | null;
 };
 
-export type GetTestInfoResponse = {
-  status: number;
-  message: string | null;
-  result: TestInfoDto | null;
+// ★ Prisma から受け取る “素材” の形
+//   （必要なプロパティだけ書けば OK。余計なものは省略してよい）
+export type TestInfoSource = {
+  testMaster: {
+    testName: string;
+    targetAnswerTime: number | null;
+    isScoreHidden: boolean | null;
+    baseScore: number | null;
+    coverNotice: string | null;
+  };
+  submit: {
+    correctAnswerRate: number | null;
+    answerTime: string | null;
+  } | null;
+  // details は今回 DTO に使っていないので型定義からは一旦外しておく
 };
 
-export function toTestInfoDto(row: TestInfoRow): TestInfoDto {
+// ★ Prisma の結果 → DTO への変換
+export function toTestInfoDto(source: TestInfoSource): TestInfoDto {
+  const { testMaster, submit } = source;
+
   return {
-    testName: row.testName,
-    targetAnswerTime: row.targetAnswerTime
-      ? `${parseInt(row.targetAnswerTime.slice(0, 2), 10)}分`
-      : null,
-    isScoreHidden: row.isScoreHidden,
-    baseScore: row.baseScore !== null ? `${row.baseScore}点` : null,
-    coverNotice: row.coverNotice,
-    isSubmitted: row.isSubmitted,
-    correctAnswerRate:
-      row.correctAnswerRate !== null ? `${row.correctAnswerRate}%` : null,
-    answerTime:
-      row.answerTimeSeconds !== null
-        ? `${Math.round(row.answerTimeSeconds / 60)}分`
+    testName: testMaster.testName,
+    targetAnswerTime:
+      testMaster.targetAnswerTime != null
+        ? String(testMaster.targetAnswerTime)
         : null,
+    isScoreHidden: !!testMaster.isScoreHidden,
+    baseScore:
+      testMaster.baseScore != null ? String(testMaster.baseScore) : null,
+    coverNotice: testMaster.coverNotice ?? null,
+    isSubmitted: submit != null,
+    correctAnswerRate:
+      submit?.correctAnswerRate != null
+        ? String(submit.correctAnswerRate)
+        : null,
+    answerTime: submit?.answerTime ?? null,
   };
 }
 
