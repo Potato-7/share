@@ -1,26 +1,6 @@
-// apps/shikakuruapi/src/app/api/_shared/create-api-handler.ts
-import { NextRequest } from "next/server";
 import { ZodError } from "zod";
-import { NotFoundError } from "@myproj/domain/errors/not-found-error";
-import { InfraError } from "@myproj/infrastructure/errors/infra-error";
 import { formatMessage } from "@myproj/messages/std";
 
-type Handler<T = unknown> = (
-  req: NextRequest,
-  ctx: { params: Record<string, string> },
-) => Promise<T>;
-
-type ApiResponse<T> = {
-  status: number;
-  message: string | null;
-  result: T | null;
-};
-
-/**
- * 各 route.ts から使う共通ラッパー
- *  - try/catch
- *  - エラー → HTTPレスポンス
- */
 export function createApiHandler<T>(handler: Handler<T>) {
   return async (req: NextRequest, ctx: { params: Record<string, string> }) => {
     try {
@@ -34,45 +14,59 @@ export function createApiHandler<T>(handler: Handler<T>) {
 
       return Response.json(body, { status: 200 });
     } catch (err) {
-      // Zod エラー（入力バリデーション）
+      // ---------------------------
+      // 🔥 ZodError（入力バリデーション）
+      // ---------------------------
       if (err instanceof ZodError) {
-        const message = err.errors[0]?.message ?? formatMessage("MSG_STD_0001");
+        // issues から最初の message を取得
+        const message =
+          err.issues?.[0]?.message ??
+          formatMessage("MSG_STD_0001"); // フォールバック
+
         const body: ApiResponse<null> = {
           status: 400,
           message,
           result: null,
         };
+
         return Response.json(body, { status: 400 });
       }
 
-      // 申込情報・テストなど「見つからない」系
+      // ---------------------------
+      // 🔥 DomainError（業務エラー）
+      // ---------------------------
+      if (err instanceof DomainError) {
+        const body: ApiResponse<null> = {
+          status: 400,
+          message: err.message,
+          result: null,
+        };
+        return Response.json(body, { status: 400 });
+      }
+
+      // ---------------------------
+      // 🔥 NotFoundError（404）
+      // ---------------------------
       if (err instanceof NotFoundError) {
-        const status = err.code === "ENROLLMENT_NOT_FOUND" ? 403 : 404;
         const body: ApiResponse<null> = {
-          status,
-          message: formatMessage(`MSG_STD_${err.code}`, err.params),
+          status: 404,
+          message: err.message,
           result: null,
         };
-        return Response.json(body, { status });
+        return Response.json(body, { status: 404 });
       }
 
-      // DB 障害などインフラ系
-      if (err instanceof InfraError) {
-        const body: ApiResponse<null> = {
-          status: 500,
-          message: formatMessage("MSG_STD_SYSTEM_ERROR"),
-          result: null,
-        };
-        return Response.json(body, { status: 500 });
-      }
-
-      // 想定外
+      // ---------------------------
+      // 🔥 予期しないエラー（500）
+      // ---------------------------
       console.error(err);
+
       const body: ApiResponse<null> = {
         status: 500,
-        message: formatMessage("MSG_STD_SYSTEM_ERROR"),
+        message: "サーバーエラーが発生しました",
         result: null,
       };
+
       return Response.json(body, { status: 500 });
     }
   };

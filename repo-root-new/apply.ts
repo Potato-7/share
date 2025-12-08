@@ -1,44 +1,48 @@
 // packages/validation/schemas/apply.ts
 import { z } from "zod";
-import { formatMessage } from "@myproj/messages/std"; // 既存のmessagesパッケージ前提
+import { formatMessage } from "@myproj/messages/std";
 
 /**
- * 受講ID
- *  No.1: 必須
- *  No.2: 桁数チェック（8桁以下）
+ * 受講共通：申込情報系スキーマ
+ * バリデーション No.1〜6
+ *
+ * No.1 jukoId 必須
+ * No.2 jukoId 桁数（8桁以下）
+ * No.3 courseCode 必須
+ * No.4 courseCode 桁数（10桁）
+ * No.5 fiscalYear 必須
+ * No.6 fiscalYear 書式チェック（yyyy）
  */
+
+// 受講ID
 export const jukoIdSchema = z
-  .string({
-    required_error: formatMessage("MSG_STD_APPLY_0001", "受講ID"),
-    invalid_type_error: formatMessage("MSG_STD_APPLY_0002", "受講ID"),
+  .string()
+  // No.1 必須チェック
+  .refine((val) => val !== undefined && val !== null && val !== "", {
+    message: formatMessage("MSG_STD_0000_0001", "受講ID"), // 「受講IDは必須です」
   })
-  .min(1, formatMessage("MSG_STD_APPLY_0001", "受講ID"))
-  .max(8, formatMessage("MSG_STD_APPLY_0003", "受講ID", "8"))
-  .regex(/^\d+$/, formatMessage("MSG_STD_APPLY_0004", "受講ID"));
+  // No.2 桁数チェック（8桁以下）
+  .max(8, formatMessage("MSG_STD_0000_0002", "受講ID", "8")); // 「受講IDは8桁以下で入力してください」
 
-/**
- * コースコード
- *  No.3: 必須
- *  No.4: 桁数チェック（10桁）
- */
+// コースコード
 export const courseCodeSchema = z
-  .string({
-    required_error: formatMessage("MSG_STD_APPLY_0001", "コースコード"),
-    invalid_type_error: formatMessage("MSG_STD_APPLY_0002", "コースコード"),
+  .string()
+  // No.3 必須チェック
+  .refine((val) => val !== undefined && val !== null && val !== "", {
+    message: formatMessage("MSG_STD_0000_0001", "コースコード"), // 「コースコードは必須です」
   })
-  .min(1, formatMessage("MSG_STD_APPLY_0001", "コースコード"))
-  .max(10, formatMessage("MSG_STD_APPLY_0003", "コースコード", "10"))
-  .regex(/^[0-9A-Z]+$/, formatMessage("MSG_STD_APPLY_0004", "コースコード"));
+  // No.4 桁数チェック（10桁）
+  .length(10, formatMessage("MSG_STD_0000_0002", "コースコード", "10")); // 「コースコードは10桁で入力してください」
 
-/**
- * 受講年
- *  No.5: 必須
- *  No.6: 書式チェック(yyyy)
- */
+// 受講年度（yyyy）
 export const fiscalYearSchema = z
-  .string({
-    required_error: formatMessage("MSG_STD_APPLY_0001", "受講年"),
-    invalid_type_error: formatMessage("MSG_STD_APPLY_0002", "受講年"),
+  .string()
+  // No.5 必須チェック
+  .refine((val) => val !== undefined && val !== null && val !== "", {
+    message: formatMessage("MSG_STD_0000_0001", "受講年度"), // 「受講年度は必須です」
   })
-  .regex(/^\d{4}$/, formatMessage("MSG_STD_APPLY_0005", "受講年"));
+  // No.6 書式チェック yyyy
+  .refine((val) => /^[0-9]{4}$/.test(val), {
+    message: formatMessage("MSG_STD_0000_0003", "受講年度", "yyyy"), // 「受講年度はyyyy形式で入力してください」みたいな想定
+  });
 
