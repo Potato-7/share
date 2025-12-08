@@ -1,13 +1,15 @@
-// packages/infra/errors/infra-error.ts
-
 export class InfraError extends Error {
-  public readonly detail?: unknown;
-
-  constructor(message: string, detail?: unknown) {
+  constructor(message: string, public readonly cause?: unknown) {
     super(message);
-    this.detail = detail;
-
+    this.cause = cause;
     Object.setPrototypeOf(this, new.target.prototype);
+    this.name = this.constructor.name;
+  }
+}
+
+export class DbError extends InfraError {
+  constructor(cause?: unknown) {
+    super("Database error", cause);
   }
 }
 
