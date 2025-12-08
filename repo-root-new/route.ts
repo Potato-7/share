@@ -1,47 +1,23 @@
-// apps/api/features/test/get-test-info/route.ts
+import { createApiHandler } from "@/app/api/_shared/create-api-handler";
+import { testIdSchema } from "@myproj/validation/schemas/test/test-id.schema";
+import { getValidEnrollment } from "@/app/api/_shared/get-valid-enrollment";
+import { getTestInfoQuery } from "@/features/test/application/get-test-info.query";
 
-import type { NextRequest } from "next/server";
-import { createApiHandler } from "../../_shared/api/create-api-handler";
-import { validateStudentContext } from "../../_shared/validation/validate-student-context";
-import { getTestInfoQuery } from "./get-test-info.query";
-import { toTestInfoDto, type GetTestInfoResponse } from "./test-info.dto";
-import { DomainError } from "@myproj/domain/common/domain-error";
-import { NotFoundError } from "../../_shared/errors/not-found-error";
-import { TestIdSchema } from "../../_shared/validation/schemas/test";
+async function handler(req: Request, { params }: { params: { testId: string } }) {
+  const testId = testIdSchema.parse(Number(params.testId));
 
-const getTestInfo = createApiHandler(
-  async (req: NextRequest, ctx: { params: { testId: string } }) => {
-    // ① 受講生共通バリデーション
-    const student = await validateStudentContext(req);
+  const enrollment = await getValidEnrollment();
 
-    // ② testId 形式チェック
-    const rawId = Number(ctx.params.testId);
-    const parsedId = TestIdSchema.safeParse(rawId);
-    if (!parsedId.success) {
-      throw new DomainError("MSG_STD_0000_008", { target: "テストID" });
-    }
-    const testId = parsedId.data;
+  const result = await getTestInfoQuery(testId, {
+    courseCode: enrollment.courseCode,
+    fiscalYear: enrollment.fiscalYear
+  });
 
-    // ③ テスト情報取得
-    const row = await getTestInfoQuery({ testId, student });
-    if (!row) {
-      throw new NotFoundError("MSG_TEST_0001", { testId });
-    }
+  return Response.json(
+    { status: 200, result },
+    { status: 200 }
+  );
+}
 
-    const dto = toTestInfoDto(row);
-
-    const body: GetTestInfoResponse = {
-      status: 200,
-      message: null,
-      result: dto,
-    };
-
-    return new Response(JSON.stringify(body), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  },
-);
-
-export { getTestInfo as GET };
+export const GET = createApiHandler(handler);
 

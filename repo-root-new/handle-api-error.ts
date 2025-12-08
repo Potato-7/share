@@ -1,51 +1,26 @@
-// apps/api/features/_shared/api/handle-api-error.ts
-
-import { NextResponse } from "next/server";
-import { DomainError } from "@myproj/domain/common/domain-error";
-import { NotFoundError } from "../errors/not-found-error";
-import { InfraError } from "@myproj/infra/errors/infra-error";
-import { formatMessage } from "@myproj/messages/std/messages";
-
-type ApiResponseBody = {
-  status: number;
-  message: string | null;
-  result: unknown;
-};
+import { ZodError } from "zod";
+import { DomainError } from "@myproj/domain/errors/domain-error";
 
 export function handleApiError(err: unknown) {
-  if (err instanceof DomainError || err instanceof NotFoundError) {
-    const binds = err.params ? Object.values(err.params) : [];
-    const message = formatMessage(err.code, ...binds);
-
-    const body: ApiResponseBody = {
-      status: 500, // 設計書に合わせて 500 固定
-      message,
-      result: null,
-    };
-
-    return NextResponse.json(body, { status: 500 });
+  if (err instanceof ZodError) {
+    return Response.json(
+      { status: 400, code: "INVALID_INPUT", message: err.issues },
+      { status: 400 }
+    );
   }
 
-  if (err instanceof InfraError) {
-    console.error("[InfraError]", err.message, err.detail);
-
-    const body: ApiResponseBody = {
-      status: 500,
-      message: "システムエラーが発生しました。",
-      result: null,
-    };
-
-    return NextResponse.json(body, { status: 500 });
+  if (err instanceof DomainError) {
+    return Response.json(
+      { status: 404, code: err.code, params: err.params },
+      { status: 404 }
+    );
   }
 
-  console.error("[UnexpectedError]", err);
+  console.error(err);
 
-  const body: ApiResponseBody = {
-    status: 500,
-    message: "システムエラーが発生しました。",
-    result: null,
-  };
-
-  return NextResponse.json(body, { status: 500 });
+  return Response.json(
+    { status: 500, code: "SERVER_ERROR", message: "内部エラーが発生しました" },
+    { status: 500 }
+  );
 }
 

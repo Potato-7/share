@@ -1,19 +1,9 @@
-// apps/api/features/_shared/api/create-api-handler.ts
-
-import type { NextRequest } from "next/server";
 import { handleApiError } from "./handle-api-error";
 
-type Handler<Params = Record<string, string>> = (
-  req: NextRequest,
-  ctx: { params: Params },
-) => Promise<Response>;
-
-export function createApiHandler<Params = Record<string, string>>(
-  handler: Handler<Params>,
-): Handler<Params> {
-  return async (req, ctx) => {
+export function createApiHandler(handler: Function) {
+  return async (...args: any[]) => {
     try {
-      return await handler(req, ctx);
+      return await handler(...args);
     } catch (err) {
       return handleApiError(err);
     }

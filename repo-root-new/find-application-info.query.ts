@@ -1,35 +1,24 @@
-// apps/api/features/_shared/queries/find-application-info.query.ts
+import { prisma } from "@myproj/prisma-client";
+import { NotFoundError } from "@myproj/domain/errors/not-found-error";
 
-import { prisma } from "@myproj/infra/prisma/client";
-
-export type ApplicationInfoRow = {
-  jukoId: string;
-  fiscalYear: number;
+export async function findEnrollmentOrThrow(params: {
+  jukoId: number;
+  fiscalYear: string;
   courseCode: string;
-};
-
-export async function findApplicationInfoByKey(params: {
-  jukoId: string;
-  fiscalYear: string; // "2025"
-  courseCode: string;
-}): Promise<ApplicationInfoRow | null> {
-  const { jukoId, fiscalYear, courseCode } = params;
-
-  const row = await prisma.applicationInfo.findFirst({
+}) {
+  const row = await prisma.enrollment.findFirst({
     where: {
-      jukoId,
-      fiscalYear: Number(fiscalYear),
-      courseCode,
-      isDeleted: false,
-    },
+      jukoId: params.jukoId,
+      fiscalYear: params.fiscalYear,
+      courseCode: params.courseCode,
+      isDeleted: false
+    }
   });
 
-  if (!row) return null;
+  if (!row) {
+    throw new NotFoundError("ENROLLMENT_NOT_FOUND", params);
+  }
 
-  return {
-    jukoId: row.jukoId,
-    fiscalYear: row.fiscalYear,
-    courseCode: row.courseCode,
-  };
+  return row;
 }
 
