@@ -1,22 +1,38 @@
+// apps/shikakuruapi/src/app/api/test/info/[testId]/route.ts
+import type { NextRequest } from "next/server";
 import { createApiHandler } from "@/app/api/_shared/create-api-handler";
-import { testIdSchema } from "@myproj/validation/schemas/test/test-id.schema";
-import { getValidEnrollment } from "@/app/api/_shared/get-valid-enrollment";
-import { getTestInfoQuery } from "@/features/test/application/get-test-info.query";
+import {
+  validateEnrollmentFromSession,
+  validateTestIdFromParams,
+} from "@/app/api/_shared/validation";
+import { getTestInfoQuery } from "@/features/test/application/query/get-test-info.query";
 
-async function handler(req: Request, { params }: { params: { testId: string } }) {
-  const testId = testIdSchema.parse(Number(params.testId));
+/**
+ * GET /api/test/info/[testId]
+ */
+async function handler(req: NextRequest, ctx: { params: { testId: string } }) {
+  // No.1〜7
+  const { jukoId, fiscalYear, courseCode } =
+    await validateEnrollmentFromSession(req);
 
-  const enrollment = await getValidEnrollment();
+  // No.8〜10
+  const testId = validateTestIdFromParams(ctx.params);
 
-  const result = await getTestInfoQuery(testId, {
-    courseCode: enrollment.courseCode,
-    fiscalYear: enrollment.fiscalYear
-  });
+  // SQL-01 相当の取得処理
+  const testInfo = await getTestInfoQuery({ testId, jukoId });
 
-  return Response.json(
-    { status: 200, result },
-    { status: 200 }
-  );
+  if (!testInfo) {
+    // NotFoundError を投げる or ここで直接 NotFound を返してもOK
+    // ここでは NotFoundError に任せるパターンの方が一貫性がある
+    throw new (await import("@myproj/domain/errors/not-found-error")).NotFoundError(
+      "TEST_NOT_FOUND",
+      { testId },
+    );
+  }
+
+  // createApiHandler が {status, message, result} に包んでくれるので
+  // handler 側は「result だけ返す」
+  return testInfo;
 }
 
 export const GET = createApiHandler(handler);

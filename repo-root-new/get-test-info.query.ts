@@ -1,29 +1,20 @@
-// apps/api/features/test/get-test-info/get-test-info.query.ts
+// apps/shikakuruapi/src/app/features/test/application/query/get-test-info.query.ts
+import { prisma } from "@myproj/prisma-client";
+import type { TestInfoDto } from "./test-info.dto";
 
-import { prisma } from "@myproj/infra/prisma/client";
-import type { StudentContext } from "../../_shared/validation/validate-student-context";
-
-export type TestInfoRow = {
-  testName: string;
-  /**
-   * DB の TIME 型 (HH:MM:SS) を文字列にしたもの
-   */
-  targetAnswerTime: string | null;
-  isScoreHidden: boolean;
-  baseScore: number | null;
-  coverNotice: string | null;
-
-  isSubmitted: boolean;
-  correctAnswerRate: number | null;
-  answerTimeSeconds: number | null;
-};
-
+/**
+ * SQL-01: テスト情報取得処理
+ *  - testMaster / testDetailMaster / testSubmit をJOINして
+ *    仕様書の出力項目をそのまま組み立てるイメージ
+ */
 export async function getTestInfoQuery(params: {
   testId: number;
-  student: StudentContext;
-}): Promise<TestInfoRow | null> {
-  const { testId, student } = params;
+  jukoId: string;
+}): Promise<TestInfoDto | null> {
+  const { testId, jukoId } = params;
 
+  // ここはあくまで「形のサンプル」
+  // 実際は schema.prisma のモデル名に合わせて修正する
   const row = await prisma.testMaster.findFirst({
     where: {
       testId,
@@ -31,28 +22,15 @@ export async function getTestInfoQuery(params: {
       details: {
         some: {
           isDeleted: false,
-          isPublicated: true,
+          isPublished: true,
         },
       },
     },
-    select: {
-      testName: true,
-      targetAnswerTime: true,
-      isScoreHidden: true,
-      baseScore: true,
-      details: {
-        select: {
-          coverNotice: true,
-        },
-        take: 1,
-      },
-      results: {
+    include: {
+      details: true,
+      submit: {
         where: {
-          jukoId: student.jukoId,
-        },
-        select: {
-          correctAnswerRate: true,
-          answerTime: true,
+          jukoId,
         },
         take: 1,
       },
@@ -61,29 +39,24 @@ export async function getTestInfoQuery(params: {
 
   if (!row) return null;
 
-  const details = row.details[0] ?? null;
-  const result = row.results[0] ?? null;
+  const submit = row.submit[0] ?? null;
 
-  const testInfo: TestInfoRow = {
+  const dto: TestInfoDto = {
+    testId: row.testId,
     testName: row.testName,
     targetAnswerTime: row.targetAnswerTime
-      ? row.targetAnswerTime.toString()
+      ? `${row.targetAnswerTime}分`
       : null,
     isScoreHidden: row.isScoreHidden,
-    baseScore: row.baseScore,
-    coverNotice: details?.coverNotice ?? null,
-    isSubmitted: !!result,
-    correctAnswerRate: result?.correctAnswerRate ?? null,
-    answerTimeSeconds: result?.answerTime
-      ? timeToSeconds(result.answerTime.toString())
+    baseScore: row.baseScore ? `${row.baseScore}点` : null,
+    coverNotice: row.details[0]?.coverNotice ?? null,
+    isSubmitted: !!submit,
+    correctAnswerRate: submit?.correctAnswerRate
+      ? `${submit.correctAnswerRate}%`
       : null,
+    answerTime: submit?.answerTime ? `${submit.answerTime}分` : null,
   };
 
-  return testInfo;
-}
-
-function timeToSeconds(time: string): number {
-  const [h, m, s] = time.split(":").map((v) => parseInt(v, 10) || 0);
-  return h * 3600 + m * 60 + s;
+  return dto;
 }
 

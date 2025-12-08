@@ -1,24 +1,26 @@
+// apps/shikakuruapi/src/app/features/_shared/application/query/find-application-info.query.ts
 import { prisma } from "@myproj/prisma-client";
-import { NotFoundError } from "@myproj/domain/errors/not-found-error";
 
-export async function findEnrollmentOrThrow(params: {
-  jukoId: number;
+/**
+ * 申込情報マスタ存在チェック（No.7）
+ * 「存在すれば true / 存在しなければ false」を返すだけのシンプルなQuery
+ */
+export async function findApplicationInfoExists(params: {
+  jukoId: string;
   fiscalYear: string;
   courseCode: string;
-}) {
-  const row = await prisma.enrollment.findFirst({
+}): Promise<boolean> {
+  const { jukoId, fiscalYear, courseCode } = params;
+
+  const count = await prisma.applicationMaster.count({
     where: {
-      jukoId: params.jukoId,
-      fiscalYear: params.fiscalYear,
-      courseCode: params.courseCode,
-      isDeleted: false
-    }
+      jukoId,
+      fiscalYear,
+      courseCode,
+      isDeleted: false,
+    },
   });
 
-  if (!row) {
-    throw new NotFoundError("ENROLLMENT_NOT_FOUND", params);
-  }
-
-  return row;
+  return count > 0;
 }
 
