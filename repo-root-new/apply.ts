@@ -1,26 +1,44 @@
-// packages/validation/src/schemas/apply/apply.ts
+// packages/validation/schemas/apply.ts
 import { z } from "zod";
+import { formatMessage } from "@myproj/messages/std"; // 既存のmessagesパッケージ前提
 
-export const applySessionSchema = z.object({
-  jukoId: z
-    .number({
-      required_error: "受講IDは必須です",
-      invalid_type_error: "受講IDが不正です",
-    })
-    .int()
-    .positive(),
+/**
+ * 受講ID
+ *  No.1: 必須
+ *  No.2: 桁数チェック（8桁以下）
+ */
+export const jukoIdSchema = z
+  .string({
+    required_error: formatMessage("MSG_STD_APPLY_0001", "受講ID"),
+    invalid_type_error: formatMessage("MSG_STD_APPLY_0002", "受講ID"),
+  })
+  .min(1, formatMessage("MSG_STD_APPLY_0001", "受講ID"))
+  .max(8, formatMessage("MSG_STD_APPLY_0003", "受講ID", "8"))
+  .regex(/^\d+$/, formatMessage("MSG_STD_APPLY_0004", "受講ID"));
 
-  fiscalYear: z
-    .string()
-    .regex(/^\d{4}$/, "年度の形式が不正です"),
+/**
+ * コースコード
+ *  No.3: 必須
+ *  No.4: 桁数チェック（10桁）
+ */
+export const courseCodeSchema = z
+  .string({
+    required_error: formatMessage("MSG_STD_APPLY_0001", "コースコード"),
+    invalid_type_error: formatMessage("MSG_STD_APPLY_0002", "コースコード"),
+  })
+  .min(1, formatMessage("MSG_STD_APPLY_0001", "コースコード"))
+  .max(10, formatMessage("MSG_STD_APPLY_0003", "コースコード", "10"))
+  .regex(/^[0-9A-Z]+$/, formatMessage("MSG_STD_APPLY_0004", "コースコード"));
 
-  courseCode: z
-    .string()
-    .min(1, "コースコードが空です"),
-});
-
-// 必要なら個別スキーマも欲しいとき用（お好みで）
-export const jukoIdSchema = applySessionSchema.shape.jukoId;
-export const fiscalYearSchema = applySessionSchema.shape.fiscalYear;
-export const courseCodeSchema = applySessionSchema.shape.courseCode;
+/**
+ * 受講年
+ *  No.5: 必須
+ *  No.6: 書式チェック(yyyy)
+ */
+export const fiscalYearSchema = z
+  .string({
+    required_error: formatMessage("MSG_STD_APPLY_0001", "受講年"),
+    invalid_type_error: formatMessage("MSG_STD_APPLY_0002", "受講年"),
+  })
+  .regex(/^\d{4}$/, formatMessage("MSG_STD_APPLY_0005", "受講年"));
 
