@@ -1,62 +1,49 @@
-// apps/shikakuruapi/src/app/features/test/application/query/get-test-info.query.ts
+// apps/shikakuruapi/src/features/test/application/query/get-test-info.query.ts
 import { prisma } from "@myproj/prisma-client";
-import type { TestInfoDto } from "./test-info.dto";
+import { toTestInfoDto } from "./test-info.dto";
 
-/**
- * SQL-01: テスト情報取得処理
- *  - testMaster / testDetailMaster / testSubmit をJOINして
- *    仕様書の出力項目をそのまま組み立てるイメージ
- */
+// 返却用の型は適当に
+export type TestInfoRow = ReturnType<typeof toTestInfoDto>;
+
 export async function getTestInfoQuery(params: {
-  testId: number;
+  testMasterTempId: number;
   jukoId: string;
-}): Promise<TestInfoDto | null> {
-  const { testId, jukoId } = params;
+}): Promise<TestInfoRow | null> {
+  const { testMasterTempId, jukoId } = params;
 
-  // ここはあくまで「形のサンプル」
-  // 実際は schema.prisma のモデル名に合わせて修正する
-  const row = await prisma.testMaster.findFirst({
+  // ① テストマスタ（Wテストマスタ）を1件取得
+  const testMaster = await prisma.wTestMaster.findFirst({
     where: {
-      testId,
+      testMasterTempId,
       isDeleted: false,
-      details: {
-        some: {
-          isDeleted: false,
-          isPublished: true,
-        },
-      },
-    },
-    include: {
-      details: true,
-      submit: {
-        where: {
-          jukoId,
-        },
-        take: 1,
-      },
     },
   });
 
-  if (!row) return null;
+  if (!testMaster) return null;
 
-  const submit = row.submit[0] ?? null;
+  // ② 設問詳細を別クエリで取得
+  const details = await prisma.testDetail.findMany({
+    where: {
+      testId: testMaster.testId,
+      isDeleted: false,
+      // isPublished: true, など必要な条件
+    },
+    orderBy: { testDetailId: "asc" },
+  });
 
-  const dto: TestInfoDto = {
-    testId: row.testId,
-    testName: row.testName,
-    targetAnswerTime: row.targetAnswerTime
-      ? `${row.targetAnswerTime}分`
-      : null,
-    isScoreHidden: row.isScoreHidden,
-    baseScore: row.baseScore ? `${row.baseScore}点` : null,
-    coverNotice: row.details[0]?.coverNotice ?? null,
-    isSubmitted: !!submit,
-    correctAnswerRate: submit?.correctAnswerRate
-      ? `${submit.correctAnswerRate}%`
-      : null,
-    answerTime: submit?.answerTime ? `${submit.answerTime}分` : null,
-  };
+  // ③ 提出情報を別クエリで取得（必要なら）
+  const submit = await prisma.tTestSubmit.findFirst({
+    where: {
+      testId: testMaster.testId,
+      jukoId,
+    },
+  });
 
-  return dto;
+  // ④ DTO にまとめて返す
+  return toTestInfoDto({
+    testMaster,
+    details,
+    submit,
+  });
 }
 
